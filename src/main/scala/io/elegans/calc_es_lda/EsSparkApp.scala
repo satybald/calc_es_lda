@@ -66,7 +66,7 @@ object EsSparkApp {
     max_k: Int = 10,
     min_k: Int = 8,
     maxIterations: Int = 100,
-    outputDir: Option[String] = "/tmp",
+    outputDir: String = "/tmp",
     stopwordFile: Option[String] = Option("stopwords/en_stopwords.txt"),
     maxTermsPerTopic: Int = 10)
 
@@ -211,6 +211,8 @@ object EsSparkApp {
       iterate = if (k < max_k) true else false
 
       /* begin print topics */
+      //TODO: to implement //val outTopicDirname = "TOPICS_K." + k + "_DN." + num_of_docs + "_VS." + ldaModel.vocabSize
+      //TODO: to implement //val outTopicFilePath = params.outputDir + "/" + outTopicDirname
       val topicIndices = ldaModel.describeTopics(maxTermsPerTopic = params.maxTermsPerTopic)
 
       topicIndices.zipWithIndex.foreach { case ((terms, termWeights), topic_i) =>
@@ -220,9 +222,15 @@ object EsSparkApp {
         }
         println()
       }
+      //TODO: to implement //val topics_data_serializer = sc.parallelize(XXXXDATAXXXX)
+      //TODO: to implement //topics_data_serializer.saveAsTextFile(outTopicFilePath)
 
       println("#BEGIN DOC_TOPIC_DIST K(" + k + ")")
-      val topKTopicsPerDoc = ldaModel.asInstanceOf[DistributedLDAModel].topTopicsPerDocument(k).map(t => (t._1, (t._2, t._3)))
+      //TODO: to implement //val outTopicPerDocumentDirname = "TOPICSxDOC_K." + k + "_DN." + num_of_docs + "_VS." + ldaModel.vocabSize
+      //TODO: to implement //val outTopicPerDocumentFilePath = params.outputDir + "/" + outTopicPerDocumentDirname
+      val topKTopicsPerDoc = ldaModel.asInstanceOf[DistributedLDAModel]
+        .topTopicsPerDocument(k).map(t => (t._1, (t._2, t._3)) /* (doc_id, (topic_i, weight)) */)
+
       topKTopicsPerDoc.foreach { d =>
         val doc_topic_ids: List[Int] = d._2._1.toList
         val doc_topic_weights: List[Double] = d._2._2.toList
