@@ -66,7 +66,7 @@ object EsSparkApp {
     max_k: Int = 10,
     min_k: Int = 8,
     maxIterations: Int = 100,
-    outputDir: Option[String] = None,
+    outputDir: Option[String] = "/tmp",
     stopwordFile: Option[String] = Option("stopwords/en_stopwords.txt"),
     maxTermsPerTopic: Int = 10)
 
@@ -80,7 +80,7 @@ object EsSparkApp {
     conf.set("es.query", query)
 
     val sc = new SparkContext(conf)
-    val search_res = sc.esRDD("jenny-en-0/question", "?q=*")
+    val search_res = sc.esRDD(params.search_path, "?q=*")
 
     val stopWords: Set[String] = params.stopwordFile match {
       case Some(stopwordFile) => sc.broadcast(scala.io.Source.fromFile(stopwordFile)
@@ -227,9 +227,9 @@ object EsSparkApp {
         val doc_topic_ids: List[Int] = d._2._1.toList
         val doc_topic_weights: List[Double] = d._2._2.toList
         val doc_id = doc_id_map(d._1)._1
-        val doc_terms_freq = doc_id_map(d._1)._2
-        //val topics_weights: Map[Int, Double] = doc_topic_ids.zip(doc_topic_weights)
-        println("DOC: (" + doc_id + ") -> [doc_topic_ids(" + doc_topic_ids + ") doc_topic_weights(" + doc_topic_weights + ")]" )
+        //val doc_terms_freq = doc_id_map(d._1)._2
+        val topics_weights: List[(Int, Double)] = doc_topic_ids.zip(doc_topic_weights)
+        println("DOC: (" + doc_id + ") -> [topics_weights(" + topics_weights + ")]" )
       }
       println("#END DOC_TOPIC_DIST K(" + k + ")")
 
@@ -281,6 +281,10 @@ object EsSparkApp {
         .text(s"list of fields to use for LDA, if more than one they will be merged" +
           s"  default: ${defaultParams.used_fields}")
         .action((x, c) => c.copy(used_fields = x))
+      opt[String]("outputDir")
+        .text(s"TO BE IMPLEMENTED: the where to store the output files: topics and document per topics" +
+          s"  default: ${defaultParams.outputDir}")
+        .action((x, c) => c.copy(outputDir = x))
     }
 
     parser.parse(args, defaultParams) match {
