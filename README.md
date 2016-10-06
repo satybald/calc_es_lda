@@ -15,7 +15,8 @@ Usage: LDA with ES data [options]
   --group_by_field <value>
                            group the search results by field e.g. conversation, None => no grouping  default: None
   --search_path <value>    the search path on elasticsearch e.g. <index name>/<type name>  default: jenny-en-0/question
-  --query <value>          a json string with the query  default: { "fields":["question", "answer", "conversation", "index_in_conversation", "_id" ] }
+  --query <value>          a json string with the query  default: { "fields":["question", "answer", "conversation",
+                                                                               "index_in_conversation", "_id" ] }
   --min_k <value>          min number of topics. default: 8
   --max_k <value>          max number of topics. default: 10
   --maxTermsPerTopic <value>
