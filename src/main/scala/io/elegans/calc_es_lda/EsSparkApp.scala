@@ -211,34 +211,37 @@ object EsSparkApp {
       iterate = if (k < max_k) true else false
 
       /* begin print topics */
-      //TODO: to implement //val outTopicDirname = "TOPICS_K." + k + "_DN." + num_of_docs + "_VS." + ldaModel.vocabSize
-      //TODO: to implement //val outTopicFilePath = params.outputDir + "/" + outTopicDirname
+      println("BEGIN SERIALIZATION OF TOPICS")
+      val outTopicDirname = "TOPICS_K." + k + "_DN." + num_of_docs + "_VS." + ldaModel.vocabSize
+      val outTopicFilePath = params.outputDir + "/" + outTopicDirname
       val topicIndices = ldaModel.describeTopics(maxTermsPerTopic = params.maxTermsPerTopic)
-
-      topicIndices.zipWithIndex.foreach { case ((terms, termWeights), topic_i) =>
-        println("TOPIC: (#" + k + "): " + topic_i)
-        terms.zip(termWeights).foreach { case (term, weight) =>
-          println(s"${terms_id_list(term)}\t$weight")
-        }
-        println()
-      }
-      //TODO: to implement //val topics_data_serializer = sc.parallelize(XXXXDATAXXXX)
-      //TODO: to implement //topics_data_serializer.saveAsTextFile(outTopicFilePath)
+      val topics_out_data = topicIndices.zipWithIndex
+        .map( entry => (entry._1._1, entry._1._2, entry._2)) //(terms, termWeights, topic_i)
+        .map( item => {
+          val joined_terms = item._1.zip(item._2) // (term_id -> weight)
+          val topic_items = joined_terms   /* topic_items -> num_of_topics, topic_id, term_id, term, weight */
+            .map(topic_term => (k, item._3, topic_term._1, terms_id_list(topic_term._1)._1, topic_term._2))
+          topic_items
+      }).flatten
+      val topics_data_serializer = sc.parallelize(topics_out_data)
+      topics_data_serializer.saveAsTextFile(outTopicFilePath)
+      println("END SERIALIZATION OF TOPICS")
 
       println("#BEGIN DOC_TOPIC_DIST K(" + k + ")")
-      //TODO: to implement //val outTopicPerDocumentDirname = "TOPICSxDOC_K." + k + "_DN." + num_of_docs + "_VS." + ldaModel.vocabSize
-      //TODO: to implement //val outTopicPerDocumentFilePath = params.outputDir + "/" + outTopicPerDocumentDirname
+      val outTopicPerDocumentDirname = "TOPICSxDOC_K." + k + "_DN." + num_of_docs + "_VS." + ldaModel.vocabSize
+      val outTopicPerDocumentFilePath = params.outputDir + "/" + outTopicPerDocumentDirname
       val topKTopicsPerDoc = ldaModel.asInstanceOf[DistributedLDAModel]
-        .topTopicsPerDocument(k).map(t => (t._1, (t._2, t._3)) /* (doc_id, (topic_i, weight)) */)
-
-      topKTopicsPerDoc.foreach { d =>
-        val doc_topic_ids: List[Int] = d._2._1.toList
-        val doc_topic_weights: List[Double] = d._2._2.toList
-        val doc_id = doc_id_map(d._1)._1
-        //val doc_terms_freq = doc_id_map(d._1)._2
-        val topics_weights: List[(Int, Double)] = doc_topic_ids.zip(doc_topic_weights)
-        println("DOC: (" + doc_id + ") -> [topics_weights(" + topics_weights + ")]" )
-      }
+        .topTopicsPerDocument(k) /* (doc_id, topic_i, list_of_weights) */
+        .map(d => {
+          val doc_topic_ids: List[Int] = d._2.toList
+          val doc_topic_weights: List[Double] = d._3.toList
+          val doc_id = doc_id_map(d._1)._1
+          val topics_weights: List[(Int, Double)] = doc_topic_ids.zip(doc_topic_weights)
+          val list_of_topics_per_doc = topics_weights
+            .map(t => (k, doc_id, t._1, t._2)) /* num_of_topics, doc_id, topic_id, weight */
+          list_of_topics_per_doc
+      }).flatMap(list => list)
+      topKTopicsPerDoc.saveAsTextFile(outTopicPerDocumentFilePath)
       println("#END DOC_TOPIC_DIST K(" + k + ")")
 
       k += 1
@@ -290,7 +293,7 @@ object EsSparkApp {
           s"  default: ${defaultParams.used_fields}")
         .action((x, c) => c.copy(used_fields = x))
       opt[String]("outputDir")
-        .text(s"TO BE IMPLEMENTED: the where to store the output files: topics and document per topics" +
+        .text(s"the where to store the output files: topics and document per topics" +
           s"  default: ${defaultParams.outputDir}")
         .action((x, c) => c.copy(outputDir = x))
     }
